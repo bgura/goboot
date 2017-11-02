@@ -1,0 +1,1 @@
+goboot is a simple framework for getting a RESTful JSON web api up and running using Go
