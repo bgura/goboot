@@ -1,12 +1,15 @@
 package goboot
 
 import (
+  "strconv"
   "io"
   "io/ioutil"
 
   "net/http"
 
   "encoding/json"
+  
+  "github.com/gorilla/mux"
 )
 
 const MAX_JSON_SIZE int64 = 1048576
@@ -59,6 +62,24 @@ func (c *Controller) DecodeJson(w http.ResponseWriter, r *http.Request, s int64,
   if err != nil {
     return err
   }
-
   return json.Unmarshal(body, &v)
+}
+
+// Get the api version which was requested
+func (c *Controller) GetVersion(r *http.Request) string {
+  if val, ok := mux.Vars(r)["version"]; ok {
+    return val
+  } else {
+    return ""
+  }
+}
+
+// Get a uint param with given name
+func (c *Controller) GetParamUint(s string, r *http.Request) (uint64, error) {
+  v := r.URL.Query().Get(s)
+  if len(v) == 0 {
+    // Default to 0
+    return 0, nil
+  }
+  return strconv.ParseUint(v, 0, 64)
 }
