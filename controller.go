@@ -3,6 +3,7 @@ package goboot
 import (
   "strconv"
   "io"
+  "fmt"
   "io/ioutil"
 
   "net/http"
@@ -82,4 +83,13 @@ func (c *Controller) GetParamUint(s string, r *http.Request) (uint64, error) {
     return 0, nil
   }
   return strconv.ParseUint(v, 0, 64)
+}
+
+// Get a query parameter with given name
+func (c *Controller) GetQueryParamUint(s string, r *http.Request) (uint64, error) {
+  if val, ok := mux.Vars(r)[s]; ok {
+    return strconv.ParseUint(val, 0, 64)
+  } else {
+    return 0, fmt.Errorf("Missing parameter")
+  }
 }
