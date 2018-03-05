@@ -1,11 +1,8 @@
 package goboot
 
 import (
-  "strconv"
   "io"
-  "fmt"
-  "io/ioutil"
-
+  "strconv"
   "net/http"
 
   "encoding/json"
@@ -15,28 +12,42 @@ import (
 
 const MAX_JSON_SIZE int64 = 1048576
 
+// Struct which handles http endpoints.
+// Has helpers which aid in send & recieve of JSON data
 type Controller struct {
 
 }
 
-func (c *Controller) SendJson(w http.ResponseWriter, r *http.Request, v interface{}) error {
+// Send back an object 'v' serialized in json to the ResponseWriter
+func (c *Controller) SendJson(w http.ResponseWriter, v interface{}) error {
   w.Header().Add("Content-Type", "application/json; charset=UTF-8")
   w.WriteHeader(http.StatusOK)
 
   return json.NewEncoder(w).Encode(v)
 }
 
-func(c *Controller) SendError(w http.ResponseWriter, r *http.Request, s int)  {
+// Send an empty json response with http status code 's'
+func(c *Controller) SendError(w http.ResponseWriter, s int)  {
   w.Header().Add("Content-Type", "application/json; charset=UTF-8")
   w.WriteHeader(s)
 }
 
-func(c *Controller) ReadJson(w http.ResponseWriter, r *http.Request, s int64, v interface{}) error {
+// Read the json body of a request and parse into provided interface 'v'
+// Number of bytes to be read can be limited with 's'
+func(c *Controller) ReadJson(r *http.Request, s int64, v interface{}) error {
   d := json.NewDecoder( io.LimitReader(r.Body, s))
 
   return d.Decode(&v);
 }
 
+// Send a json response back to the client with a given request id and payload
+func(c *Controller) SendPayload(w http.ResponseWriter, s string, v interface{}) error {
+  msg := JsonResponse{
+    RequestId: s,
+    Payload: v,
+  }
+  return c.SendJson(w, msg)
+}
 /*
 This function can determine if a given string (the body of a request) is a json
 array or a single json object. We can't safely parse one over the other and must
@@ -58,38 +69,22 @@ func(c *Controller) IsJsonArray(b string) err {
 }
 */
 
-func (c *Controller) DecodeJson(w http.ResponseWriter, r *http.Request, s int64, v interface{}) error {
-  body, err := ioutil.ReadAll(io.LimitReader(r.Body, s))
-  if err != nil {
-    return err
-  }
-  return json.Unmarshal(body, &v)
-}
-
 // Get the api version which was requested
 func (c *Controller) GetVersion(r *http.Request) string {
-  if val, ok := mux.Vars(r)["version"]; ok {
-    return val
-  } else {
-    return ""
-  }
+  return mux.Vars(r)["version"]
 }
 
-// Get a uint param with given name
-func (c *Controller) GetParamUint(s string, r *http.Request) (uint64, error) {
-  v := r.URL.Query().Get(s)
-  if len(v) == 0 {
-    // Default to 0
-    return 0, nil
-  }
-  return strconv.ParseUint(v, 0, 64)
-}
-
-// Get a query parameter with given name
-func (c *Controller) GetQueryParamUint(s string, r *http.Request) (uint64, error) {
-  if val, ok := mux.Vars(r)[s]; ok {
-    return strconv.ParseUint(val, 0, 64)
-  } else {
-    return 0, fmt.Errorf("Missing parameter")
-  }
+// Read a var uint64. Mux should provide a facility for validating
+// that the var is present as its a required piece of the routing
+func (c *Controller) ReadVarUint64(r *http.Request, s string) uint64 {
+	if v, ok := mux.Vars(r)[s]; ok {
+		// Try to convert the parameter
+		if i, err := strconv.ParseUint(v, 10, 64); err != nil {
+			panic("Failed to convert parameter to Uint64")
+		} else {
+			return i
+		}
+	} else {
+		panic("Parameter not found and no default defined")
+	}
 }
