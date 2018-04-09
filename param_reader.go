@@ -108,6 +108,24 @@ func (p *paramReader) ReadUint64(s string) uint64 {
 	}
 }
 
+// Get the parameter as a string
+func (p *paramReader) ReadString(s string) string {
+	if !p.HasParameter(s) {
+		// Check for default
+		if v, ok := p.defaults[s]; !ok {
+			panic("Parameter not found and no default defined")
+		} else {
+			return v
+		}
+	}
+
+	if v, ok := p.context.URL.Query()[s]; ok {
+		return v[0]
+	} else {
+		panic("Parameter not found and no default defined")
+	}
+}
+
 // Add an error for the given parameter 's'. If an error is already set
 // subsequent calls are effectively a no-op
 func(p *paramReader) AddError(s string, e string) {
